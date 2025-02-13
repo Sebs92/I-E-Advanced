@@ -23,6 +23,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const closeRulesButton = document.getElementById("close-rules");
     const firstConnectionButton = document.getElementById("signup-button");
 
+    loadPostItsFromServer();
+
     let currentColor = "yellow"; // Couleur par défaut des post-its
     let scale = 1; // Zoom par défaut
     let isMouseDown = false; // Indicateur de clic
@@ -33,11 +35,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentUser = null; // Utilisateur actuel
     let streak = 0; // Variable pour stocker le streak de l'utilisateur
     let lastPostDate = null; // Date de la dernière publication du post-it
-
-    loadPostItsFromLocalStorage(); // Chargement des post-its 
-
-    // Liste des mots interdits
-    const bannedWords = ["ntm", "fdp", "connard", "con", "pute"];
 
     // 1. Afficher les règles lorsque l'utilisateur clique sur le bouton "Règlement"
     rulesButton.addEventListener("click", () => {
@@ -228,7 +225,7 @@ document.addEventListener("DOMContentLoaded", () => {
         wall.appendChild(postIt);
         postIt.focus();
     
-        savePostItsToLocalStorage(); // Sauvegarde après création
+        savePostItsToServer(postIt); // Sauvegarde après création
     };
 
     // Vérifier si une position est occupée par un post-it
@@ -281,39 +278,46 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    function savePostItsToLocalStorage() {
-        const postItsData = postIts.map(postIt => ({
-            content: postIt.value,
-            x: postIt.style.left,
-            y: postIt.style.top,
-            color: postIt.style.backgroundColor,
-            userId: postIt.dataset.userId,
-            timestamp: postIt.dataset.timestamp
-        }));
-        localStorage.setItem('postIts', JSON.stringify(postItsData));
+    // Sauvegarde d'un post-it sur le serveur
+    function savePostItToServer(postIt) {
+        fetch("save_postit.php", {
+            method: "POST",
+            body: JSON.stringify({
+                content: postIt.value,
+                x: postIt.style.left,
+                y: postIt.style.top,
+                color: postIt.style.backgroundColor,
+                userId: postIt.dataset.userId,
+                timestamp: postIt.dataset.timestamp
+            }),
+            headers: {
+                "Content-Type": "application/json"
+            }
+        }).catch(error => console.error("Erreur lors de la sauvegarde :", error));
     }
-
-    function loadPostItsFromLocalStorage() {
-        const savedPostIts = JSON.parse(localStorage.getItem('postIts')) || [];
-        savedPostIts.forEach(postItData => {
-            const postIt = document.createElement("textarea");
-            postIt.className = "post-it";
-            postIt.value = postItData.content;
-            postIt.style.backgroundColor = postItData.color;
-            postIt.style.left = postItData.x;
-            postIt.style.top = postItData.y;
-            postIt.dataset.userId = postItData.userId;
-            postIt.dataset.timestamp = postItData.timestamp;
     
-            // Ajoutez ici les autres événements nécessaires (redimensionnement, menu contextuel, etc.)
+    // Chargement des post-its depuis le serveur
+    function loadPostItsFromServer() {
+        fetch("load_postits.php")
+            .then(response => response.json())
+            .then(postItsData => {
+                postItsData.forEach(postItData => {
+                    const postIt = document.createElement("textarea");
+                    postIt.className = "post-it";
+                    postIt.value = postItData.content;
+                    postIt.style.backgroundColor = postItData.color;
+                    postIt.style.left = postItData.x;
+                    postIt.style.top = postItData.y;
+                    postIt.dataset.userId = postItData.userId;
+                    postIt.dataset.timestamp = postItData.timestamp;
     
-            postIts.push(postIt);
-            wall.appendChild(postIt);
-        });
+                    postIts.push(postIt);
+                    wall.appendChild(postIt);
+                });
+            })
+            .catch(error => console.error("Erreur lors du chargement :", error));
     }
-
     
-
     // Mise à jour du streak
     const updateStreak = () => {
         const today = new Date().toISOString().split("T")[0]; // Date du jour au format YYYY-MM-DD
