@@ -34,6 +34,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let streak = 0; // Variable pour stocker le streak de l'utilisateur
     let lastPostDate = null; // Date de la dernière publication du post-it
 
+    loadPostItsFromLocalStorage(); // Chargement des post-its 
+
     // Liste des mots interdits
     const bannedWords = ["ntm", "fdp", "connard", "con", "pute"];
 
@@ -221,6 +223,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Mettre à jour le streak (on ajoute un jour si c'est un nouveau post-it)
         updateStreak();
+
+        postIts.push(postIt);
+        wall.appendChild(postIt);
+        postIt.focus();
+    
+        savePostItsToLocalStorage(); // Sauvegarde après création
     };
 
     // Vérifier si une position est occupée par un post-it
@@ -272,6 +280,39 @@ document.addEventListener("DOMContentLoaded", () => {
             returnWallButton.onclick = () => hideMenu(menuWall);
         }
     });
+
+    function savePostItsToLocalStorage() {
+        const postItsData = postIts.map(postIt => ({
+            content: postIt.value,
+            x: postIt.style.left,
+            y: postIt.style.top,
+            color: postIt.style.backgroundColor,
+            userId: postIt.dataset.userId,
+            timestamp: postIt.dataset.timestamp
+        }));
+        localStorage.setItem('postIts', JSON.stringify(postItsData));
+    }
+
+    function loadPostItsFromLocalStorage() {
+        const savedPostIts = JSON.parse(localStorage.getItem('postIts')) || [];
+        savedPostIts.forEach(postItData => {
+            const postIt = document.createElement("textarea");
+            postIt.className = "post-it";
+            postIt.value = postItData.content;
+            postIt.style.backgroundColor = postItData.color;
+            postIt.style.left = postItData.x;
+            postIt.style.top = postItData.y;
+            postIt.dataset.userId = postItData.userId;
+            postIt.dataset.timestamp = postItData.timestamp;
+    
+            // Ajoutez ici les autres événements nécessaires (redimensionnement, menu contextuel, etc.)
+    
+            postIts.push(postIt);
+            wall.appendChild(postIt);
+        });
+    }
+
+    
 
     // Mise à jour du streak
     const updateStreak = () => {
